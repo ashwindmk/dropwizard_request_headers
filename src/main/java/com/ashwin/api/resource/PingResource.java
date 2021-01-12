@@ -40,8 +40,8 @@ public class PingResource {
     @GET
     @Path("/forward")
     public Response forward(@Context HttpHeaders headers) {
-        System.out.println("Headers | headers.user-agent: " + headers.getHeaderString(HttpHeaders.USER_AGENT));
-        System.out.println("Headers | headers: " + headers.getRequestHeaders());
+        System.out.println("forward | headers | headers.user-agent: " + headers.getHeaderString(HttpHeaders.USER_AGENT));
+        System.out.println("forward | headers | headers: " + headers.getRequestHeaders());
 
         Client client = ClientBuilder.newClient();
         MultivaluedMap<String, Object> map = asObjectHeaders(headers.getRequestHeaders());
@@ -50,6 +50,32 @@ public class PingResource {
         WebTarget webTarget = client.target(url);
         Invocation invocation = webTarget.request().headers(map).build("GET");
         return invocation.invoke();
+    }
+
+    @GET
+    @Path("/location")
+    public Response location(@Context HttpHeaders headers) {
+        System.out.println("location | Headers | headers.user-agent: " + headers.getHeaderString(HttpHeaders.USER_AGENT));
+        System.out.println("location | Headers | headers: " + headers.getRequestHeaders());
+
+        Client client = ClientBuilder.newClient();
+        MultivaluedMap<String, Object> map = asObjectHeaders(headers.getRequestHeaders());
+
+        String url = "http://localhost:9090/redirect";
+        WebTarget webTarget = client.target(url);
+        Invocation invocation = webTarget.request().headers(map).build("GET");
+        Response response = invocation.invoke();
+
+        String location = null;
+        if (response.getStatus() == Response.Status.FOUND.getStatusCode()
+                || response.getStatus() == Response.Status.TEMPORARY_REDIRECT.getStatusCode()) {
+            MultivaluedMap<String, Object> responseHeaders = response.getHeaders();
+            location = String.valueOf(responseHeaders.getFirst(HttpHeaders.LOCATION));
+            System.out.println("location | responseHeaders : " + responseHeaders);
+        }
+
+        return Response.seeOther(UriBuilder.fromUri(location).build()).status(Response.Status.MOVED_PERMANENTLY).build();
+        //return Response.ok(location).build();
     }
 
 //    public static MultivaluedMap<String, Object> asObjectHeaders(MultivaluedMap<String, String> headers) {
